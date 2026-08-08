@@ -1,0 +1,54 @@
+# ---- DAegis private / local-only files (NEVER commit) ----
+HERMES.md
+RESEARCH.md
+.env
+.env.*
+!.env.example
+
+# ---- Secrets / credentials ----
+*.pem
+*.key
+secrets.json
+credentials.json
+.onchainos/
+~/.config/moltbook/
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.python-version
+
+# ---- Node ----
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnp.*
+dist/
+coverage/
+
+# ---- Foundry / Hardhat (contracts) ----
+cache/
+out/
+artifacts/
+typechain-types/
+broadcast/**/dry-run/
+
+# ---- Editor / OS ----
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.log
