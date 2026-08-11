@@ -1,6 +1,6 @@
 # DAegis Agent
 
-**An autonomous security agent on X Layer that detects dangerous token approvals in real time and revokes them onchain — before they're exploited.**
+**An autonomous security agent on X Layer that detects dangerous token approvals in real time and revokes them onchain before they're exploited.**
 
 > 🏆 Built for the **OKX Build-X Hackathon — AI Season (Aug 7–21, 2026)**
 
