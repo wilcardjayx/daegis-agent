@@ -52,3 +52,5 @@ broadcast/**/dry-run/
 .DS_Store
 *.swp
 *.log
+SPEC.md
+CLAUDE.md
