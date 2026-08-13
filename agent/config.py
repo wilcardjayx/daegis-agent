@@ -1,0 +1,133 @@
+"""Chain, RPC and contract configuration for the DAegis agent.
+
+Every chain-level constant lives here. Nothing downstream of this module is
+allowed to inline a chain ID, an RPC URL, a contract address or an event topic —
+per CLAUDE.md, guessed values of exactly that kind are the main way this project
+goes sideways.
+
+Values are sourced in this order:
+  1. process environment
+  2. the repo-root `.env` (gitignored; holds testnet throwaway keys)
+  3. the checked-in defaults below, which are the values confirmed in CLAUDE.md
+
+Zero external dependencies — stdlib only, matching okx_client.py. There is no
+python-dotenv here on purpose; `_load_env_file` is nine lines and saves a
+dependency on a 4 GB phone.
+"""
+from __future__ import annotations
+
+import os
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+ENV_PATH = REPO_ROOT / ".env"
+
+
+def _load_env_file(path: Path = ENV_PATH) -> dict[str, str]:
+    """Parse a minimal KEY=VALUE .env. Ignores blanks, comments and junk lines."""
+    values: dict[str, str] = {}
+    if not path.is_file():
+        return values
+    for line in path.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        values[key.strip()] = value.strip().strip('"').strip("'")
+    return values
+
+
+_ENV_FILE = _load_env_file()
+
+
+def env(name: str, default: str = "") -> str:
+    """Real environment wins over .env, which wins over the passed default."""
+    return os.environ.get(name) or _ENV_FILE.get(name) or default
+
+
+# ---------------------------------------------------------------------------
+# Chain facts — confirmed from official OKX docs, see CLAUDE.md "Chain facts"
+# ---------------------------------------------------------------------------
+
+XLAYER_TESTNET_CHAIN_ID = 1952  # NOT 195; that is a deprecated older testnet
+XLAYER_MAINNET_CHAIN_ID = 196
+
+XLAYER_TESTNET_RPC = env("XLAYER_TESTNET_RPC_URL", "https://testrpc.xlayer.tech/terigon")
+XLAYER_TESTNET_RPC_BACKUP = "https://xlayertestrpc.okx.com/terigon"
+XLAYER_MAINNET_RPC = env("XLAYER_MAINNET_RPC_URL", "https://rpc.xlayer.tech")
+XLAYER_MAINNET_RPC_BACKUP = "https://xlayerrpc.okx.com"
+
+EXPLORER_TX_URL = "https://www.okx.com/web3/explorer/xlayer-test/tx/{tx_hash}"
+EXPLORER_ADDRESS_URL = "https://www.okx.com/web3/explorer/xlayer-test/address/{address}"
+
+# Gas token is OKB, not ETH. Kept as a name so log lines can't drift.
+GAS_TOKEN_SYMBOL = "OKB"
+
+# ---------------------------------------------------------------------------
+# RPC limits — MEASURED against testrpc.xlayer.tech/terigon on Aug 13 2026.
+# These are not guesses and not documented by OKX; re-probe if the RPC changes.
+# ---------------------------------------------------------------------------
+
+#: `eth_getLogs` rejects any request where toBlock - fromBlock > 100 with
+#: `-32602 block range greater than 100 max`. A span of exactly 100 succeeds.
+MAX_LOG_RANGE_BLOCKS = 100
+
+#: Measured 1.0 s/block over a 100-block sample. The poller must therefore keep
+#: up with ~100 blocks per 100 seconds; one full-size getLogs window per second
+#: is the break-even rate.
+BLOCK_TIME_SECONDS = 1.0
+
+#: How far behind head to stay. X Layer is an OP Stack chain with 1 s blocks;
+#: a small lag avoids re-reading logs that a reorg would invalidate.
+CONFIRMATIONS = 2
+
+#: Sleep between polls when caught up. Below block time is pointless.
+POLL_INTERVAL_SECONDS = 2.0
+
+RPC_TIMEOUT_SECONDS = 20
+RPC_MAX_ATTEMPTS = 3
+
+# ---------------------------------------------------------------------------
+# Event signatures — computed with `cast keccak`, not typed from memory
+# ---------------------------------------------------------------------------
+
+#: keccak256("Approval(address,address,uint256)")
+#: WARNING: ERC-721's `Approval(address,address,uint256)` hashes identically.
+#: The two are distinguished by shape, not by topic — see detect.is_erc20_approval.
+APPROVAL_TOPIC0 = "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925"
+
+#: keccak256("Transfer(address,address,uint256)")
+TRANSFER_TOPIC0 = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+
+# ---------------------------------------------------------------------------
+# Allowance thresholds
+# ---------------------------------------------------------------------------
+
+MAX_UINT256 = 2**256 - 1
+
+#: What counts as "unlimited" for the Phase 2 detector.
+#:
+#: Not every drainer uses exactly type(uint256).max — some use max/2, or a
+#: number with enough zeros that it exceeds any real token's supply while
+#: looking less obviously hostile in a wallet UI. Anything at or above 2**255
+#: is unspendable-in-practice for any real token, so it is treated as
+#: effectively unlimited. Exact max is still reported distinctly, because it is
+#: the single strongest signal and the LLM in Phase 3 should see the difference.
+UNLIMITED_THRESHOLD = 2**255
+
+# ---------------------------------------------------------------------------
+# Deployed contracts (Phase 1) and demo props
+# ---------------------------------------------------------------------------
+
+THREAT_REGISTRY_ADDRESS = env("THREAT_REGISTRY_ADDRESS")
+GUARDED_ACCOUNT_ADDRESS = env("GUARDED_ACCOUNT_ADDRESS")
+DEMO_TOKEN_ADDRESS = env("DEMO_TOKEN_ADDRESS")
+DEMO_SPENDER_ADDRESS = env("DEMO_SPENDER_ADDRESS")
+
+DEPLOYER_ADDRESS = env("DEPLOYER_ADDRESS")
+DEMO_OWNER_ADDRESS = env("DEMO_OWNER_ADDRESS")
+TEE_WALLET_ADDRESS = env("TEE_WALLET_ADDRESS")
+
+#: Where the poller remembers how far it has scanned. Gitignored.
+STATE_DIR = REPO_ROOT / "agent" / "state"
+DETECT_CURSOR_PATH = STATE_DIR / "detect_cursor.json"

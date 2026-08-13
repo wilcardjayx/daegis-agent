@@ -49,6 +49,10 @@ broadcast/**/dry-run/
 # `forge verify-contract --show-standard-json-input` dumps.
 contracts/flattened/
 
+# ---- Agent runtime state ----
+# Poller cursor (last scanned block). Machine-local, not shared state.
+agent/state/
+
 # ---- Editor / OS ----
 .vscode/
 .idea/
