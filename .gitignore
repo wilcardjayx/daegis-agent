@@ -54,3 +54,4 @@ broadcast/**/dry-run/
 *.log
 SPEC.md
 CLAUDE.md
+.env
