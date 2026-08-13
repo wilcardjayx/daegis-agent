@@ -1,0 +1,31 @@
+[profile.default]
+src = "src"
+out = "out"
+test = "test"
+libs = ["lib"]
+
+# Pinned, not floating. OKLink source verification requires the exact compiler
+# version and settings the bytecode was produced with — a drifting solc between
+# `forge create` and `forge verify-contract` is a guaranteed verification failure.
+solc = "0.8.35"
+optimizer = true
+optimizer_runs = 200
+bytecode_hash = "none"
+
+# Conservative on purpose: "paris" emits no PUSH0/TSTORE/MCOPY, so it executes on
+# every EVM fork from London onward.
+#
+# X Layer testnet IS Cancun-or-later — confirmed Aug 13 2026 with `cast` against a
+# live testnet block: both `excessBlobGas` and `parentBeaconBlockRoot` are present,
+# which only Cancun headers carry. Raising this to "cancun" is therefore SAFE and
+# would recover the PUSH0/MCOPY/TSTORE gas savings paris leaves on the table.
+#
+# Deliberately NOT changed during Phase 1 — deferred optimization, not a blocker.
+# Revisit only after the Phase 4 gate, and re-verify + re-deploy + re-verify source
+# if changed, since it alters bytecode.
+evm_version = "paris"
+
+[fmt]
+line_length = 100
+tab_width = 4
+bracket_spacing = false

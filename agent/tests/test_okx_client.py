@@ -1,8 +1,8 @@
-"""Unit tests for daegis.okx.cli — run against fixtures, no live network.
+"""Unit tests for agent.okx_client — run against fixtures, no live network.
 
 Usage:
-  cd ~/daegis
-  python3 -m unittest tests.test_cli_approvals -v
+  cd ~/daegis-agent
+  python3 -m unittest agent.tests.test_okx_client -v
 
 The live integration test is in test_live_approvals.py (skipped unless
 DAEGIS_LIVE_OKX=1 is set, because it requires the chroot + authenticated wallet).
@@ -16,10 +16,10 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from daegis.okx.cli import (
+from agent.okx_client import (
     Approval,
     ApprovalsResult,
     OnchainosError,

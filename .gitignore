@@ -45,6 +45,9 @@ out/
 artifacts/
 typechain-types/
 broadcast/**/dry-run/
+# Regenerable verification artifacts: `forge flatten` output and
+# `forge verify-contract --show-standard-json-input` dumps.
+contracts/flattened/
 
 # ---- Editor / OS ----
 .vscode/
