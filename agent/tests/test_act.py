@@ -1,14 +1,16 @@
-"""Unit tests for agent.act branch dispatch — mocked cast, no network, no chain.
+"""Unit tests for agent.act branch dispatch — mocked TEE write, no network, no chain.
 
 Usage:
   cd ~/daegis-agent
   python3 -m unittest agent.tests.test_act -v
 
-The full act path is proven live in the Phase 4 run (malicious -> record+revoke,
-suspicious -> record only, benign -> nothing, all unattended on testnet). These
-pin the branch LOGIC deterministically: which on-chain calls fire for each verdict
-and guarded/non-guarded owner combination. `cast` is mocked at the _cast_send /
-keccak_text seam so no transaction is ever sent.
+The full act path is proven live (Phase 4: malicious -> record+revoke, suspicious
+-> record only, benign -> nothing; Phase 5: both writes issued by the TEE agentic
+wallet after the guardian/agent rotation). These pin the branch LOGIC
+deterministically: which on-chain calls fire for each verdict and guarded/non-
+guarded owner combination, and that they are issued through the TEE seam. The
+write is mocked at the _tee_send / keccak_text seam so no transaction is ever sent
+and no wallet/CLI is invoked.
 """
 from __future__ import annotations
 
@@ -49,25 +51,25 @@ class ActDispatchTest(unittest.TestCase):
         self._tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self._tmp.cleanup)
 
-        # Mock the on-chain seam and keccak; isolate config from the real .env.
-        self.cast_send = patch.object(act, "_cast_send", side_effect=self._fake_send).start()
+        # Mock the TEE write seam and keccak; isolate config from the real .env.
+        # _tee_send is mocked whole, so no cast/onchainos process ever runs.
+        self.tee_send = patch.object(act, "_tee_send", side_effect=self._fake_send).start()
         patch.object(act, "keccak_text", return_value=FAKE_HASH).start()
         patch.object(config, "GUARDED_ACCOUNTS", frozenset({GUARDED})).start()
         patch.object(config, "VERDICT_STORE_DIR", Path(self._tmp.name)).start()
         patch.object(config, "THREAT_REGISTRY_ADDRESS", REGISTRY).start()
-        patch.object(config, "env", side_effect=lambda k, d="": "0xdeadbeefkey" if k == "DEPLOYER_PRIVATE_KEY" else d).start()
         self.addCleanup(patch.stopall)
 
         self._tx_counter = 0
 
-    def _fake_send(self, to, signature, args, private_key):
+    def _fake_send(self, to, signature, args):
         self._tx_counter += 1
         return f"0x{'0' * 63}{self._tx_counter}"
 
     # -- helpers to read what was sent --
 
     def _signatures_sent(self) -> list[str]:
-        return [call.args[1] for call in self.cast_send.call_args_list]
+        return [call.args[1] for call in self.tee_send.call_args_list]
 
     def _reason_files(self) -> list[Path]:
         return list(Path(self._tmp.name).glob("*.json"))
@@ -83,7 +85,7 @@ class ActDispatchTest(unittest.TestCase):
             ["record(address,uint8,bytes32)", "revoke(address,address)"],
         )
         # revoke goes to the guarded account with (token, spender)
-        revoke_call = self.cast_send.call_args_list[1]
+        revoke_call = self.tee_send.call_args_list[1]
         self.assertEqual(revoke_call.args[0], GUARDED)
         self.assertEqual(revoke_call.args[2], [TOKEN, SPENDER])
 
@@ -96,7 +98,7 @@ class ActDispatchTest(unittest.TestCase):
 
     def test_malicious_record_carries_score_and_reasonhash(self):
         act.act_on_verdict(_verdict("malicious", 95), _event(GUARDED))
-        record_call = self.cast_send.call_args_list[0]
+        record_call = self.tee_send.call_args_list[0]
         self.assertEqual(record_call.args[0], REGISTRY)
         # args to record(): [spender, risk_score, reasonHash]
         self.assertEqual(record_call.args[2], [SPENDER, "95", FAKE_HASH])
@@ -122,9 +124,19 @@ class ActDispatchTest(unittest.TestCase):
         result = act.act_on_verdict(_verdict("benign", 15), _event(GUARDED))
         self.assertFalse(result.recorded)
         self.assertFalse(result.revoked)
-        self.assertEqual(self.cast_send.call_count, 0)  # no cast send at all
+        self.assertEqual(self.tee_send.call_count, 0)  # no TEE write at all
         self.assertIsNone(result.record_tx)
         self.assertIsNone(result.reason_hash)
+
+    # -- Phase 5: one TEE identity writes verdicts AND revokes --
+
+    def test_both_writes_go_through_the_tee_seam(self):
+        # The whole point of Phase 5: record and revoke are issued by the same
+        # TEE wallet, not an EOA private key. Both must flow through _tee_send,
+        # and nothing must reach a `cast send` / private-key path (there is none).
+        act.act_on_verdict(_verdict("malicious", 95), _event(GUARDED))
+        self.assertEqual(self.tee_send.call_count, 2)  # record + revoke, both TEE
+        self.assertFalse(hasattr(act, "_cast_send"))   # the EOA send seam is gone
 
     # -- reasoning store --
 

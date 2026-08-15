@@ -177,7 +177,24 @@ GUARDED_ACCOUNTS = frozenset(a for a in (GUARDED_ACCOUNT_ADDRESS.lower(),) if a)
 #: hash back to prose through this store. Gitignored (under STATE_DIR).
 VERDICT_STORE_DIR = STATE_DIR / "verdicts"
 
-#: The `cast` binary (Foundry). On-chain writes shell out to it rather than
-#: signing in-process — Foundry is already the project's signer everywhere, and
-#: it avoids a native-secp256k1 Python dependency that is unreliable on aarch64.
+#: The `cast` binary (Foundry). Used for LOCAL, keyless operations only —
+#: `cast keccak` (reasonHash) and `cast calldata` (encode a call). Foundry is
+#: already the project's tooling everywhere, and this avoids a native-secp256k1
+#: Python dependency that is unreliable on aarch64.
 CAST_BIN = env("DAEGIS_CAST_BIN") or str(Path.home() / ".foundry" / "bin" / "cast")
+
+# ---------------------------------------------------------------------------
+# Phase 5 — TEE agentic wallet as the on-chain identity
+# ---------------------------------------------------------------------------
+
+#: After the Phase 5 rotation the TEE agentic wallet is BOTH the ThreatRegistry
+#: agent (record) and the GuardedAccount guardian (revoke). The loop therefore
+#: holds no private key for these writes — the key lives in OKX's TEE and the
+#: writes go through `onchainos wallet contract-call`, which signs there. Calldata
+#: is still built locally and keylessly with `cast calldata`.
+ONCHAINOS_BIN = env("DAEGIS_ONCHAINOS_BIN") or str(Path.home() / ".local" / "bin" / "onchainos")
+
+#: The `onchainos --chain` value for X Layer testnet. Confirmed from
+#: `onchainos wallet chains`: chainName "xlayer_test" maps to chainIndex 1952.
+#: NOT the numeric id — the CLI wants the chainName here.
+XLAYER_TESTNET_CHAIN_NAME = "xlayer_test"

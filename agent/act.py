@@ -12,11 +12,13 @@ consequences to chain:
                 a write per legitimate approval. Phase 6's free-tier alert keys on
                 isFlagged(), so benign must stay unflagged.)
 
-On-chain writes shell out to `cast send` (Foundry) rather than signing in-process.
-Foundry is already this project's signer for every deploy and send, it handles
-nonce/gas, and it avoids pulling a native-secp256k1 Python dependency onto the
-aarch64 build phone. This is the same "shell out to a trusted CLI" pattern as
-okx_client.py.
+On-chain writes go through the OKX TEE agentic wallet via `onchainos wallet
+contract-call` (Phase 5). After the rotation, the TEE wallet is BOTH the
+ThreatRegistry agent (record) and the GuardedAccount guardian (revoke), so a
+single identity writes verdicts and revokes approvals — and the loop holds no
+private key for either. The signing key lives in OKX's TEE; the CLI signs there.
+Calldata is still built locally and keylessly with `cast calldata`. This is the
+same "shell out to a trusted CLI" pattern as okx_client.py.
 
 The full reasoning text is stored off-chain (config.VERDICT_STORE_DIR), keyed by
 the keccak256 hash that is pinned on-chain, so the public page can resolve a hash
@@ -36,15 +38,22 @@ from agent.detect import ApprovalEvent, emit
 
 
 class ActError(RuntimeError):
-    """An on-chain write (or the keccak helper) failed. Never swallowed: a verdict
+    """An on-chain write (or a local helper) failed. Never swallowed: a verdict
     that could not be recorded/revoked must surface, not be treated as handled."""
 
 
 # ---------------------------------------------------------------------------
-# cast (Foundry) subprocess helpers
+# Local, keyless cast (Foundry) helpers — keccak and calldata only
 # ---------------------------------------------------------------------------
 
 _CAST_TIMEOUT_S = 120
+_ONCHAINOS_TIMEOUT_S = 180
+
+#: How long to wait for a TEE UserOp to mine before giving up. X Layer blocks are
+#: ~1 s; a UserOp is normally mined within a few. The wait is what lets record and
+#: revoke run sequentially without racing the smart account's nonce.
+_RECEIPT_ATTEMPTS = 24
+_RECEIPT_DELAY_S = 3.0
 
 
 def _run_cast(args: list[str], *, timeout: int = _CAST_TIMEOUT_S) -> str:
@@ -79,36 +88,106 @@ def keccak_text(text: str) -> str:
     return out
 
 
-def _cast_send(to: str, signature: str, args: list[str], private_key: str) -> str:
-    """`cast send` a state-changing call, returning the transaction hash.
+# ---------------------------------------------------------------------------
+# TEE agentic wallet write seam (onchainos wallet contract-call)
+# ---------------------------------------------------------------------------
 
-    cast send is synchronous — it waits for the receipt — so sequential sends
-    (record then revoke) never race on nonce.
+
+def _wait_for_success(tx_hash: str) -> None:
+    """Poll for the receipt of a TEE UserOp and confirm it mined successfully.
+
+    contract-call returns as soon as the UserOp is broadcast, not when it mines.
+    Waiting here does two jobs: it surfaces an on-chain revert as an ActError
+    (rather than a silently-dropped verdict), and it serialises record-then-revoke
+    so two UserOps from the same smart account never race on its nonce.
     """
-    result = _run_cast(
-        [
-            "send",
-            to,
-            signature,
-            *args,
-            "--rpc-url",
-            config.XLAYER_TESTNET_RPC,
-            "--private-key",
-            private_key,
-            "--json",
-        ]
+    for _ in range(_RECEIPT_ATTEMPTS):
+        proc = subprocess.run(
+            [config.CAST_BIN, "receipt", tx_hash, "--rpc-url", config.XLAYER_TESTNET_RPC, "--json"],
+            capture_output=True,
+            text=True,
+            timeout=_CAST_TIMEOUT_S,
+            check=False,
+        )
+        if proc.returncode == 0 and proc.stdout.strip():
+            try:
+                receipt = json.loads(proc.stdout)
+            except json.JSONDecodeError:
+                receipt = {}
+            status = receipt.get("status")
+            if status in ("0x1", 1, "1"):
+                return
+            if status in ("0x0", 0, "0"):
+                raise ActError(f"TEE tx {tx_hash} reverted (status {status})")
+        time.sleep(_RECEIPT_DELAY_S)
+    raise ActError(
+        f"TEE tx {tx_hash} not mined after "
+        f"{_RECEIPT_ATTEMPTS * _RECEIPT_DELAY_S:.0f}s"
     )
+
+
+def _tee_send(to: str, signature: str, args: list[str]) -> str:
+    """Execute a state-changing call FROM the TEE agentic wallet, returning the
+    confirmed transaction hash.
+
+    The TEE wallet signs inside OKX's TEE — this process holds no key for it.
+    Calldata is encoded locally and keylessly with `cast calldata`, then handed to
+    `onchainos wallet contract-call`, which builds and broadcasts the ERC-4337
+    UserOp. We then wait for the receipt (see `_wait_for_success`).
+    """
+    calldata = _run_cast(["calldata", signature, *args]).strip()
+    if not (calldata.startswith("0x") and len(calldata) > 2):
+        raise ActError(f"cast calldata produced nothing for {signature!r}: {calldata!r}")
+
+    if not config.TEE_WALLET_ADDRESS:
+        raise ActError("TEE_WALLET_ADDRESS is not set (check .env)")
+
     try:
-        receipt = json.loads(result)
+        proc = subprocess.run(
+            [
+                config.ONCHAINOS_BIN,
+                "wallet",
+                "contract-call",
+                "--to",
+                to,
+                "--chain",
+                config.XLAYER_TESTNET_CHAIN_NAME,
+                "--from",
+                config.TEE_WALLET_ADDRESS,
+                "--input-data",
+                calldata,
+                "--force",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=_ONCHAINOS_TIMEOUT_S,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as e:
+        raise ActError(f"onchainos contract-call timed out after {_ONCHAINOS_TIMEOUT_S}s") from e
+    except FileNotFoundError as e:
+        raise ActError(
+            f"onchainos not found at {config.ONCHAINOS_BIN!r}; set DAEGIS_ONCHAINOS_BIN"
+        ) from e
+
+    # contract-call prints its JSON envelope on stdout for BOTH success and a
+    # backend rejection (ok:false), the latter with a nonzero exit — so parse
+    # stdout first and only fall back to stderr when there is nothing to parse.
+    out = proc.stdout.strip()
+    if not out:
+        tail = (proc.stderr or "").strip().splitlines()[-4:]
+        raise ActError(f"onchainos contract-call produced no output ({proc.returncode}): {tail!r}")
+    try:
+        payload = json.loads(out)
     except json.JSONDecodeError as e:
-        raise ActError(f"cast send returned non-JSON: {result[:200]!r}") from e
-    tx_hash = receipt.get("transactionHash")
-    status = receipt.get("status")
+        raise ActError(f"onchainos contract-call returned non-JSON: {out[:200]!r}") from e
+    if not payload.get("ok"):
+        raise ActError(f"onchainos contract-call failed: {payload.get('error')!r}")
+    tx_hash = (payload.get("data") or {}).get("txHash")
     if not tx_hash:
-        raise ActError(f"cast send receipt had no transactionHash: {receipt}")
-    # status is "0x1" success / "0x0" revert on a mined receipt.
-    if status not in (None, "0x1", 1, "1"):
-        raise ActError(f"transaction {tx_hash} reverted (status {status})")
+        raise ActError(f"onchainos contract-call returned no txHash: {payload}")
+
+    _wait_for_success(tx_hash)
     return tx_hash
 
 
@@ -156,27 +235,27 @@ class ActionResult:
 
 
 def act_on_verdict(verdict: Verdict, event: ApprovalEvent) -> ActionResult:
-    """Apply the verdict to chain. Returns what was done."""
+    """Apply the verdict to chain. Returns what was done.
+
+    Both writes are issued by the TEE agentic wallet (Phase 5): it is the registry
+    agent for `record` and the guardian for `revoke`. No private key is held here.
+    """
     if verdict.verdict == "benign":
         emit(f"[act] benign — no registry write, no revoke ({verdict.spender})")
         return ActionResult(verdict="benign", recorded=False, revoked=False)
 
-    private_key = config.env("DEPLOYER_PRIVATE_KEY")  # EOA-1: registry agent AND guardian
-    if not private_key:
-        raise ActError("DEPLOYER_PRIVATE_KEY is not set (check .env)")
     if not config.THREAT_REGISTRY_ADDRESS:
         raise ActError("THREAT_REGISTRY_ADDRESS is not set (check .env)")
 
     reason_hash = keccak_text(verdict.reasoning)
     store_reasoning(verdict, event, reason_hash)
 
-    record_tx = _cast_send(
+    record_tx = _tee_send(
         config.THREAT_REGISTRY_ADDRESS,
         "record(address,uint8,bytes32)",
         [verdict.spender, str(verdict.risk_score), reason_hash],
-        private_key,
     )
-    emit(f"[act] recorded {verdict.verdict} risk {verdict.risk_score} for {verdict.spender}")
+    emit(f"[act] recorded {verdict.verdict} risk {verdict.risk_score} for {verdict.spender} (TEE)")
     emit(f"[act]   registry tx {record_tx}")
 
     revoked = False
@@ -184,14 +263,13 @@ def act_on_verdict(verdict: Verdict, event: ApprovalEvent) -> ActionResult:
     if verdict.verdict == "malicious":
         owner = event.owner.lower()
         if owner in config.GUARDED_ACCOUNTS:
-            revoke_tx = _cast_send(
+            revoke_tx = _tee_send(
                 owner,  # the GuardedAccount contract is the approval's owner
                 "revoke(address,address)",
                 [event.token, event.spender],
-                private_key,
             )
             revoked = True
-            emit(f"[act] revoked approval on guarded account {owner}")
+            emit(f"[act] revoked approval on guarded account {owner} (TEE guardian)")
             emit(f"[act]   revoke tx {revoke_tx}")
         else:
             emit(f"[act] owner {owner} is not a guarded account — recorded but NOT revoked")
