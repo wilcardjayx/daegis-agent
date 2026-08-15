@@ -156,3 +156,28 @@ VERDICTS = ("malicious", "suspicious", "benign")
 #: Risk scores are 0-100. Mirrors ThreatRegistry.MAX_RISK_SCORE on-chain, which
 #: rejects anything higher — decide.py clamps to this before any registry write.
 MAX_RISK_SCORE = 100
+
+# ---------------------------------------------------------------------------
+# Phase 4 — act (registry write + guarded revoke)
+# ---------------------------------------------------------------------------
+
+#: How far back the live loop looks when gathering a flagged spender's evidence:
+#: window is [approval_block - this, current safe head]. Small enough to stay
+#: within a couple of getLogs chunks (the RPC's 100-block cap) so a verdict is
+#: fast, large enough to catch recent history around the approval.
+EVIDENCE_LOOKBACK_BLOCKS = 200
+
+#: Addresses the agent is allowed to AUTO-REVOKE for. Per SPEC.md's hard scope
+#: rule, auto-revoke is restricted to this whitelist of guarded demo wallets —
+#: never arbitrary wallets. Currently just the deployed GuardedAccount.
+GUARDED_ACCOUNTS = frozenset(a for a in (GUARDED_ACCOUNT_ADDRESS.lower(),) if a)
+
+#: Full LLM reasoning is stored here, one file per verdict, keyed by the keccak256
+#: reasonHash that is pinned on-chain. Phase 6's public page resolves the on-chain
+#: hash back to prose through this store. Gitignored (under STATE_DIR).
+VERDICT_STORE_DIR = STATE_DIR / "verdicts"
+
+#: The `cast` binary (Foundry). On-chain writes shell out to it rather than
+#: signing in-process — Foundry is already the project's signer everywhere, and
+#: it avoids a native-secp256k1 Python dependency that is unreliable on aarch64.
+CAST_BIN = env("DAEGIS_CAST_BIN") or str(Path.home() / ".foundry" / "bin" / "cast")
