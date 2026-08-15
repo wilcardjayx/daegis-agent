@@ -131,3 +131,28 @@ TEE_WALLET_ADDRESS = env("TEE_WALLET_ADDRESS")
 #: Where the poller remembers how far it has scanned. Gitignored.
 STATE_DIR = REPO_ROOT / "agent" / "state"
 DETECT_CURSOR_PATH = STATE_DIR / "detect_cursor.json"
+
+# ---------------------------------------------------------------------------
+# Phase 3 — LLM verdict (decide.py)
+# ---------------------------------------------------------------------------
+
+#: Model the verdict runs on. Chosen by the user for Phase 3. Exact ID, no date
+#: suffix. Called over raw HTTPS with stdlib urllib (see decide.py) rather than
+#: the anthropic SDK — the SDK pulls in a Rust-extension dependency whose aarch64
+#: wheel is unreliable on the 4 GB phone this builds on.
+LLM_MODEL = "claude-sonnet-4-6"
+ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
+ANTHROPIC_API_VERSION = "2023-06-01"
+ANTHROPIC_API_KEY = env("ANTHROPIC_API_KEY")
+
+#: Verdict output is deliberately tiny: strict JSON with 1-3 sentence reasoning.
+#: The reasoning is hash-pinned on-chain, so it must be short and evidence-citing,
+#: not an essay. This caps a runaway generation, not the expected length.
+LLM_MAX_TOKENS = 512
+
+#: The three verdict labels decide.py will accept back from the model.
+VERDICTS = ("malicious", "suspicious", "benign")
+
+#: Risk scores are 0-100. Mirrors ThreatRegistry.MAX_RISK_SCORE on-chain, which
+#: rejects anything higher — decide.py clamps to this before any registry write.
+MAX_RISK_SCORE = 100
