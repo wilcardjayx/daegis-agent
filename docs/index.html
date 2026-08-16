@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DAegis — the drain never happened</title>
+<meta name="description" content="An autonomous on-chain guardian that catches a malicious token approval and revokes it before a single token moves. Live threat registry on X Layer testnet.">
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+<link rel="preload" href="fonts/archivo-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="styles.css">
+<script src="keccak.js" defer></script>
+<script src="app.js" defer></script>
+</head>
+<body>
+
+<header class="site-head">
+  <div class="wrap head-inner">
+    <a class="brand" href="#top" aria-label="DAegis home">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+        <path d="M16 2.4 4 6.1v8.7c0 6.9 4.8 12.2 12 14.8 7.2-2.6 12-7.9 12-14.8V6.1L16 2.4Z" fill="currentColor"/>
+        <path d="M11.7 10.1h4.6c3.2 0 5.5 2.4 5.5 5.9s-2.3 5.9-5.5 5.9h-4.6V10.1Zm3.1 2.9v6h1.3c1.5 0 2.5-1.2 2.5-3s-1-3-2.5-3h-1.3Z" fill="var(--paper)"/>
+      </svg>
+      <span class="brand-word">DAegis</span>
+    </a>
+    <nav class="head-nav" aria-label="Primary">
+      <a href="#registry">Registry</a>
+      <a href="#watch">Watch</a>
+      <a href="#how">How it works</a>
+      <a href="#contracts">Contracts</a>
+      <a href="#about">About</a>
+    </nav>
+    <span class="net-pill" id="net-pill" title="Live connection to X Layer testnet">
+      <span class="net-dot" aria-hidden="true"></span>
+      <span id="net-text">connecting…</span>
+    </span>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ============================ HERO — the 91-block save ============================ -->
+  <section class="hero">
+    <div class="wrap">
+      <p class="eyebrow">Proven on-chain · X Layer testnet</p>
+      <h1 class="hero-title">The drain never happened.</h1>
+      <p class="hero-lede">
+        A malicious contract got an unlimited approval on a guarded account.
+        DAegis's autonomous guardian read the approval, judged the spender, and
+        revoked it <strong>91&nbsp;blocks later</strong> — before a single token moved.
+        These are real transactions. Verify every number.
+      </p>
+
+      <figure class="ledger" aria-label="Timeline of the prevented drain">
+        <div class="ledger-rail" id="ledger-rail">
+          <span class="ledger-fill" id="ledger-fill"></span>
+
+          <div class="ledger-mark ledger-mark--start">
+            <span class="tick tick--risk" aria-hidden="true"></span>
+            <div class="mark-body">
+              <span class="mark-label">Approval landed</span>
+              <a class="mark-block mono" id="hero-approve-link" target="_blank" rel="noopener">block 38,340,097</a>
+              <span class="mark-sub">unlimited allowance → a spender DAegis had flagged malicious</span>
+            </div>
+          </div>
+
+          <div class="ledger-span" aria-hidden="true">
+            <span class="span-num mono">91</span>
+            <span class="span-unit">blocks · ~91s</span>
+          </div>
+
+          <div class="ledger-mark ledger-mark--end">
+            <span class="tick tick--safe" aria-hidden="true"></span>
+            <div class="mark-body">
+              <span class="mark-label">Guardian revoked</span>
+              <a class="mark-block mono" id="hero-revoke-link" target="_blank" rel="noopener">block 38,340,188</a>
+              <span class="mark-sub">the TEE agentic wallet set the allowance to zero</span>
+            </div>
+          </div>
+        </div>
+
+        <figcaption class="ledger-result">
+          <span class="result-num mono">0</span>
+          <span class="result-text">
+            tokens moved.
+            <span class="result-live" id="hero-live">Live check: the spender's allowance on that account is <b class="mono" id="hero-allowance">…</b> right now.</span>
+          </span>
+        </figcaption>
+      </figure>
+
+      <div class="hero-cta">
+        <a class="btn btn--primary" href="#watch">Check an address</a>
+        <a class="btn btn--ghost" href="#registry">See the live registry</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ REGISTRY — live feed ============================ -->
+  <section class="section" id="registry">
+    <div class="wrap">
+      <header class="sec-head">
+        <p class="eyebrow">01 · Threat registry</p>
+        <h2 class="sec-title">Every spender the agent has judged, read live from chain.</h2>
+        <p class="sec-lede">
+          A free, public record. Each verdict below is fetched from
+          <code>ThreatRegistry.isFlagged()</code> the moment this page loads — the
+          score and reason-hash come straight from the contract, not from this site.
+          The reasoning text is verified in your browser against that on-chain hash.
+        </p>
+      </header>
+
+      <div class="registry" id="registry-list" aria-live="polite">
+        <div class="reg-loading" id="registry-loading">Reading verdicts from the registry…</div>
+      </div>
+
+      <p class="sec-foot mono" id="registry-foot"></p>
+    </div>
+  </section>
+
+  <!-- ============================ WATCH — the checker ============================ -->
+  <section class="section section--alt" id="watch">
+    <div class="wrap">
+      <header class="sec-head">
+        <p class="eyebrow">02 · Watch a wallet</p>
+        <h2 class="sec-title">Before you approve a contract, ask the registry.</h2>
+        <p class="sec-lede">
+          Paste any spender or contract address. DAegis checks it against the
+          registry live and, if it's flagged, tells you why — with the reasoning
+          verified against the on-chain hash. No wallet connection, no key, nothing leaves your browser.
+        </p>
+      </header>
+
+      <form class="checker" id="checker" novalidate>
+        <label class="sr-only" for="check-input">Spender or contract address</label>
+        <input class="mono" id="check-input" name="address" type="text" spellcheck="false"
+               autocomplete="off" placeholder="0x… spender or contract address">
+        <button class="btn btn--primary" type="submit" id="check-btn">Check</button>
+      </form>
+      <p class="checker-try">
+        Try a real one:
+        <button class="chip mono" data-addr="0xe9eb89da7a2dF4Bd1A644d737bAEFf1dDE87F7D5">0xe9eb…F7D5 (drainer)</button>
+        <button class="chip mono" data-addr="0x122589dF6fC8BF65500927dbcb87906bbA715ED0">0x1225…5ED0 (router)</button>
+      </p>
+
+      <div class="check-result" id="check-result" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <!-- ============================ HOW IT WORKS ============================ -->
+  <section class="section" id="how">
+    <div class="wrap">
+      <header class="sec-head">
+        <p class="eyebrow">03 · How it works</p>
+        <h2 class="sec-title">Detect. Decide. Revoke. Unattended.</h2>
+        <p class="sec-lede">
+          DAegis watches approvals as they land, judges the spender's intent, and —
+          for accounts under its guard — pulls the approval before it can be used.
+          One identity does all of it, and it can do only one dangerous thing.
+        </p>
+      </header>
+
+      <ol class="loop" id="loop">
+        <li class="loop-step" data-step="detect">
+          <span class="loop-index mono">01</span>
+          <h3 class="loop-name">Detect</h3>
+          <p class="loop-copy">A poller reads <code>Approval</code> logs from X Layer and flags any that grant an unlimited allowance.</p>
+        </li>
+        <li class="loop-arrow" aria-hidden="true"><span></span></li>
+        <li class="loop-step" data-step="decide">
+          <span class="loop-index mono">02</span>
+          <h3 class="loop-name">Decide</h3>
+          <p class="loop-copy">The spender's bytecode and history go to a model. Unlimited alone is never the tell — intent is. It returns a verdict and a reason.</p>
+        </li>
+        <li class="loop-arrow" aria-hidden="true"><span></span></li>
+        <li class="loop-step" data-step="revoke">
+          <span class="loop-index mono">03</span>
+          <h3 class="loop-name">Revoke</h3>
+          <p class="loop-copy">If the account is guarded and the verdict is malicious, the guardian sets the allowance to zero. The verdict is recorded either way.</p>
+        </li>
+      </ol>
+
+      <aside class="asymmetry">
+        <h3 class="asym-title">The guardian can only revoke.</h3>
+        <p>
+          DAegis holds a guardian role on a <code>GuardedAccount</code>, but that role's
+          entire power is one function: set an approval to zero. It cannot move tokens,
+          change the owner, or reassign itself. The safety isn't a promise — it's the
+          shape of the contract. The key never leaves OKX's TEE.
+        </p>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ============================ CONTRACTS & API ============================ -->
+  <section class="section section--alt" id="contracts">
+    <div class="wrap">
+      <header class="sec-head">
+        <p class="eyebrow">04 · Contracts &amp; API</p>
+        <h2 class="sec-title">Open, verified, free to read.</h2>
+        <p class="sec-lede">The registry is public infrastructure. Anyone can query it — no account, no fee, no permission.</p>
+      </header>
+
+      <div class="contract-grid">
+        <div class="contract-card">
+          <span class="cc-label">ThreatRegistry</span>
+          <a class="cc-addr mono" id="cc-registry" target="_blank" rel="noopener">0x7f9C…48D9</a>
+          <span class="cc-note">The verdict record. <code>isFlagged(address)</code> is the read.</span>
+        </div>
+        <div class="contract-card">
+          <span class="cc-label">GuardedAccount</span>
+          <a class="cc-addr mono" id="cc-guarded" target="_blank" rel="noopener">0x2736…9DDf</a>
+          <span class="cc-note">The account under guard. Guardian's only power: <code>revoke</code>.</span>
+        </div>
+        <div class="contract-card">
+          <span class="cc-label">Network</span>
+          <span class="cc-addr mono">X Layer testnet · 1952</span>
+          <span class="cc-note">Gas token OKB. RPC <code>testrpc.xlayer.tech/terigon</code>.</span>
+        </div>
+      </div>
+
+      <div class="api-call">
+        <div class="api-head">
+          <span class="eyebrow">Check any spender yourself</span>
+          <button class="copy-btn" id="copy-curl" type="button">Copy</button>
+        </div>
+<pre class="api-code mono" id="curl-snippet"><code>curl -s https://testrpc.xlayer.tech/terigon \
+  -H 'content-type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"eth_call","params":[{
+    "to":"0x7f9C1eB88cB6cc7D098a3ba1aDe13b57761b48D9",
+    "data":"0xfef48a99000000000000000000000000e9eb89da7a2df4bd1a644d737baeff1dde87f7d5"
+  },"latest"]}'
+# returns (bool flagged, uint8 riskScore, bytes32 reasonHash)</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ ABOUT ============================ -->
+  <section class="section" id="about">
+    <div class="wrap about">
+      <div class="about-lead">
+        <p class="eyebrow">05 · About DAegis</p>
+        <h2 class="sec-title">A guardian that acts, not just an alarm that rings.</h2>
+      </div>
+      <div class="about-body">
+        <p>
+          Most approval tools scan and then leave you to revoke by hand, or ask for a
+          delegation broad enough to move your funds. DAegis does neither. It watches,
+          it judges intent with a model rather than a blocklist, and where it holds a
+          guardian role it revokes the dangerous approval itself — automatically, within
+          seconds, with a power narrow enough to be safe by construction.
+        </p>
+        <p>
+          The whole loop runs on a single OKX TEE agentic wallet: it writes the verdicts
+          and it performs the revokes, holding no private key on the machine that runs the
+          agent. What you see on this page is that agent's real work on X Layer testnet —
+          nothing here is staged.
+        </p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-foot">
+  <div class="wrap foot-inner">
+    <span class="foot-brand mono">DAegis</span>
+    <span class="foot-note">Autonomous approval guardian · X Layer testnet · built for OKX Build-X</span>
+    <span class="foot-note foot-warn">Testnet demo — throwaway keys, no real funds.</span>
+  </div>
+</footer>
+
+</body>
+</html>

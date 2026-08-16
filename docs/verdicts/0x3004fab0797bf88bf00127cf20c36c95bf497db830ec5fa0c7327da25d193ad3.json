@@ -1,0 +1,12 @@
+{
+  "reason_hash": "0x3004fab0797bf88bf00127cf20c36c95bf497db830ec5fa0c7327da25d193ad3",
+  "spender": "0x122589df6fc8bf65500927dbcb87906bba715ed0",
+  "verdict": "suspicious",
+  "risk_score": 50,
+  "reasoning": "An unlimited approval from owner 0x273650d9001f1c7dd6ba098c22cba045743c9ddf was granted (block 38303765) but no token movements have been observed, so the contract's intent is entirely untested. The contract exposes only swap(address,uint256) and calls transferFrom, which is consistent with a legitimate router but also with a drainer \u2014 the address argument in swap() could be used to direct tokens to a third party. Unverified source and the absence of any observed transfer history leave the approval's legitimacy unconfirmed.",
+  "token": "0x28ef702c621dd0b82ae5bb0753c3a3c1d875a20e",
+  "owner": "0x273650d9001f1c7dd6ba098c22cba045743c9ddf",
+  "flagged_tx": "0x641a1e07e9eeec7090647b32f2e4b9952c6d81d010731e5014b24e82034cc4e6",
+  "flagged_block": 38303765,
+  "recorded_at": 1786762617.574824
+}
