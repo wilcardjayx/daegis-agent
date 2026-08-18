@@ -1,0 +1,12 @@
+{
+  "reason_hash": "0x842550f65ec90de07a245de73396c9b691994918bf4c5dec3e2f746328170b8b",
+  "spender": "0xe9eb89da7a2df4bd1a644d737baeff1dde87f7d5",
+  "verdict": "malicious",
+  "risk_score": 95,
+  "reasoning": "The contract exposes an `attacker()` getter function, which is a hard-coded structural drainer tell \u2014 no legitimate protocol has any reason to expose such an endpoint. Combined with `claim(address,address)` invoking `transferFrom` on approved tokens and an unverified source, this contract is structurally designed to drain owner 0x273650d9001f1c7dd6ba098c22cba045743c9ddf's unlimited approval of token 0x28ef702c621dd0b82ae5bb0753c3a3c1d875a20e. No observed token movements yet, but the `attacker()` getter alone is sufficient grounds for a malicious verdict.",
+  "token": "0x28ef702c621dd0b82ae5bb0753c3a3c1d875a20e",
+  "owner": "0x273650d9001f1c7dd6ba098c22cba045743c9ddf",
+  "flagged_tx": "0x93d997ed670935c6fb88fc98f39330a57530c4bf22f82b7f8e93a7b880337207",
+  "flagged_block": 38355001,
+  "recorded_at": 1786814006.2922678
+}

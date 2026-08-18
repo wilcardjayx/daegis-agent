@@ -1,0 +1,7 @@
+{
+  "note": "Discovery seed for the live registry. A Solidity mapping can't be enumerated on-chain, so this lists the spender addresses DAegis has flagged. Each one's verdict (flagged, risk, reasonHash) is read LIVE from ThreatRegistry.isFlagged() at page load — not from this file. New flags also surface via a bounded recent eth_getLogs tail scan.",
+  "spenders": [
+    "0xe9eb89da7a2dF4Bd1A644d737bAEFf1dDE87F7D5",
+    "0x122589dF6fC8BF65500927dbcb87906bbA715ED0"
+  ]
+}

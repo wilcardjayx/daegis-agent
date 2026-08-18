@@ -1,0 +1,6 @@
+{
+  "name": "DAegis — Autonomous Approval Guardian",
+  "description": "An autonomous on-chain guardian that catches malicious token approvals and revokes them before a single token moves on X Layer testnet.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
