@@ -17,8 +17,8 @@ export const Logo: React.FC<LogoProps> = ({
   }
 
   return (
-    <img 
-      src="/logo.jpg" 
+    <img
+      src={`${((import.meta as any).env?.BASE_URL as string) || '/'}logo.jpg`}
       alt="DAegis Logo"
       width={size}
       height={size}
