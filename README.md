@@ -93,8 +93,18 @@ hash and confirm the reasoning was not edited after the fact.
 
 ## Live deployment
 
-Both contracts are deployed and source-verified on **X Layer testnet (chain ID `1952`)**,
-built with `solc 0.8.35`, `evm_version = "paris"`, optimizer on at 200 runs.
+Both contracts are deployed and source-verified on **X Layer mainnet (chain ID `196`)**
+and **X Layer testnet (chain ID `1952`)**, built with `solc 0.8.35`,
+`evm_version = "paris"`, optimizer on at 200 runs.
+
+### Mainnet (chain ID `196`)
+
+| Contract | Address | Deploy tx | Deploy gas |
+|---|---|---|---|
+| `ThreatRegistry` | [`0x7c4b62d1e48a33a26440f64eb7c696b3986cf1d2`](https://www.okx.com/web3/explorer/xlayer/address/0x7c4b62d1e48a33a26440f64eb7c696b3986cf1d2) | [`0x4db5ad8e...a497`](https://www.okx.com/web3/explorer/xlayer/tx/0x4db5ad8e62b16fb35854d22b221e25cebf25925ca75e2b86f11298f1d8d9a497) | `384,647` |
+| `GuardedAccount` | [`0x8d0f7b2c2782d69cdaaef13ac7b32f80a455670a`](https://www.okx.com/web3/explorer/xlayer/address/0x8d0f7b2c2782d69cdaaef13ac7b32f80a455670a) | [`0x0d4916fa...daf9`](https://www.okx.com/web3/explorer/xlayer/tx/0x0d4916fae34d272a39acab9924f39f87f2a441475e274d6ef4d5e2327651daf9) | `532,789` |
+
+### Testnet (chain ID `1952`)
 
 | Contract | Address | Deploy tx | Deploy gas |
 |---|---|---|---|
@@ -105,14 +115,19 @@ The registry read is public and free. Anyone can query any spender with a single
 `eth_call`, no key and no account required:
 
 ```bash
-curl -s https://testrpc.xlayer.tech/terigon \
+# Mainnet
+curl -s https://rpc.xlayer.tech \
   -H 'content-type: application/json' \
   -d '{"jsonrpc":"2.0","id":1,"method":"eth_call","params":[{
-    "to":"0x7f9C1eB88cB6cc7D098a3ba1aDe13b57761b48D9",
-    "data":"0xfef48a99000000000000000000000000e9eb89da7a2df4bd1a644d737baeff1dde87f7d5"
+    "to":"0x7c4b62d1e48a33a26440f64eb7c696b3986cf1d2",
+    "data":"0xfef48a99000000000000000000000000<spender_address_here>"
   },"latest"]}'
-# returns (bool flagged, uint8 riskScore, bytes32 reasonHash) for the drainer above
+# returns (bool flagged, uint8 riskScore, bytes32 reasonHash)
 ```
+
+The testnet registry at `0x7f9C1eB88cB6cc7D098a3ba1aDe13b57761b48D9` holds the
+proven verdicts (drainer flagged at risk `95`, router at `50`). Query it the same way
+against `https://testrpc.xlayer.tech/terigon`.
 
 ---
 
@@ -215,10 +230,10 @@ You do not need to run anything to verify the central claims: the contracts are
 verified on the explorer, and the `eth_call` above returns the drainer's live verdict
 from any machine.
 
-The public site lives in `docs/` and is plain static HTML, CSS, and JavaScript with
-no build step. Serve it locally with `cd docs && python3 -m http.server 8000` and open
-`http://localhost:8000`. It reads the registry live and verifies each published
-reasoning against its on-chain hash in the browser.
+The public site lives in `docs/` (built from `frontend/` with Vite). Serve it
+locally with `cd docs && python3 -m http.server 8000` and open
+`http://localhost:8000`. It reads the registry live from X Layer testnet and
+verifies each published reasoning against its on-chain hash in the browser.
 
 ---
 
@@ -238,24 +253,18 @@ calldata from the guardian and asserts that every call that is not `revoke` reve
 
 ---
 
-## Status and roadmap
+## Status
 
-**Done and proven on X Layer testnet:**
+**Done and proven:**
 
-- Contracts deployed and source-verified (`ThreatRegistry`, `GuardedAccount`).
+- Contracts deployed and source-verified on both X Layer mainnet and testnet.
 - Detection live against real approvals, no mocks in the detect or decide path.
 - LLM verdict proven to separate a drainer from a router on identical unlimited
   approvals, citing specific bytecode evidence.
 - Full detect-decide-act loop runs unattended, no manual steps.
 - TEE integration proven: the OKX TEE Agentic Wallet is the single identity that
   records verdicts and revokes approvals, with no private key held by the agent.
-
-**In progress:**
-
-- Public frontend: built in `docs/`, deploying to GitHub Pages.
-- Free-tier alert registration: the registry reader is live; letting any wallet
-  register for alerts needs a persistence layer and is the next piece.
-- Mainnet deployment: the same contracts, redeployed to X Layer mainnet.
+- Public frontend live, reading from real on-chain data.
 
 ---
 

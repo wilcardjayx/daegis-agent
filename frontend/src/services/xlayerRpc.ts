@@ -32,6 +32,16 @@ const CFG = {
   TAIL_BLOCKS: 2000,
 };
 
+export const MAINNET_CONFIG = {
+  chainId: 196,
+  rpcUrl: 'https://rpc.xlayer.tech',
+  explorerUrl: 'https://www.okx.com/web3/explorer/xlayer',
+  threatRegistryAddress: '0x7c4b62d1e48a33a26440f64eb7c696b3986cf1d2',
+  guardedAccountAddress: '0x8d0f7b2c2782d69cdaaef13ac7b32f80a455670a',
+  threatRegistryTx: '0x4db5ad8e62b16fb35854d22b221e25cebf25925ca75e2b86f11298f1d8d9a497',
+  guardedAccountTx: '0x0d4916fae34d272a39acab9924f39f87f2a441475e274d6ef4d5e2327651daf9',
+};
+
 const ZERO32 = '0x0000000000000000000000000000000000000000000000000000000000000000';
 const BASE = ((import.meta as any).env?.BASE_URL as string) || '/';
 

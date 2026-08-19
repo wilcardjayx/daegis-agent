@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NETWORK_CONFIG } from '../services/xlayerRpc';
+import { NETWORK_CONFIG, MAINNET_CONFIG } from '../services/xlayerRpc';
 import { queryXLayerRpc } from '../services/xlayerRpc';
 import { Copy, Check, ExternalLink, Play, Terminal, Code2, Database, ShieldCheck } from 'lucide-react';
 import { formatAddress } from '../utils/keccak';
@@ -63,11 +63,78 @@ export const ContractsApi: React.FC = () => {
           </p>
         </div>
 
-        {/* 3 Contract Cards Grid */}
+        {/* Mainnet Contracts */}
+        <div className="flex items-center gap-2 text-xs font-mono font-semibold uppercase tracking-wider text-zinc-500 dark:text-[#a1a1aa] mb-4">
+          <Database strokeWidth={1.25} className="h-4 w-4 text-zinc-900 dark:text-white" />
+          <span>X Layer Mainnet · Chain 196</span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:gap-8 gap-6 mb-12 lg:mb-14">
+
+          {/* Mainnet ThreatRegistry */}
+          <div className="rounded-2xl border border-zinc-200 dark:border-[#27272a] bg-white dark:bg-[#121215] p-6 flex flex-col justify-between hover:border-zinc-300 dark:hover:border-[#52525b] transition-all">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-mono text-zinc-400 dark:text-[#71717a] uppercase">Contract</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 text-emerald-700 dark:text-emerald-400">
+                  Mainnet
+                </span>
+              </div>
+              <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-2">ThreatRegistry</h3>
+              <p className="text-xs text-zinc-500 dark:text-[#a1a1aa] leading-relaxed mb-4">
+                Production registry on X Layer mainnet. Same contract, verified source.
+              </p>
+            </div>
+            <div className="pt-4 border-t border-zinc-200 dark:border-[#27272a] flex items-center justify-between text-xs font-mono">
+              <span className="text-zinc-900 dark:text-[#f4f4f5]">{formatAddress(MAINNET_CONFIG.threatRegistryAddress, 8, 6)}</span>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={() => handleCopy(MAINNET_CONFIG.threatRegistryAddress, 'mn-reg')} className="text-zinc-400 dark:text-[#71717a] hover:text-zinc-900 dark:hover:text-white" title="Copy address">
+                  {copiedKey === 'mn-reg' ? <Check strokeWidth={1.25} className="h-3.5 w-3.5 text-zinc-900 dark:text-white" /> : <Copy strokeWidth={1.25} className="h-3.5 w-3.5" />}
+                </button>
+                <a href={`${MAINNET_CONFIG.explorerUrl}/address/${MAINNET_CONFIG.threatRegistryAddress}`} target="_blank" rel="noopener noreferrer" className="text-zinc-500 dark:text-[#a1a1aa] hover:text-zinc-900 dark:hover:text-white inline-flex items-center gap-0.5">
+                  <ExternalLink strokeWidth={1.25} className="h-3.5 w-3.5" />
+                </a>
+              </div>
+            </div>
+          </div>
+
+          {/* Mainnet GuardedAccount */}
+          <div className="rounded-2xl border border-zinc-200 dark:border-[#27272a] bg-white dark:bg-[#121215] p-6 flex flex-col justify-between hover:border-zinc-300 dark:hover:border-[#52525b] transition-all">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-mono text-zinc-400 dark:text-[#71717a] uppercase">Contract</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 text-emerald-700 dark:text-emerald-400">
+                  Mainnet
+                </span>
+              </div>
+              <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-2">GuardedAccount</h3>
+              <p className="text-xs text-zinc-500 dark:text-[#a1a1aa] leading-relaxed mb-4">
+                Production guarded account on X Layer mainnet. Same contract, verified source.
+              </p>
+            </div>
+            <div className="pt-4 border-t border-zinc-200 dark:border-[#27272a] flex items-center justify-between text-xs font-mono">
+              <span className="text-zinc-900 dark:text-[#f4f4f5]">{formatAddress(MAINNET_CONFIG.guardedAccountAddress, 8, 6)}</span>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={() => handleCopy(MAINNET_CONFIG.guardedAccountAddress, 'mn-guard')} className="text-zinc-400 dark:text-[#71717a] hover:text-zinc-900 dark:hover:text-white" title="Copy address">
+                  {copiedKey === 'mn-guard' ? <Check strokeWidth={1.25} className="h-3.5 w-3.5 text-zinc-900 dark:text-white" /> : <Copy strokeWidth={1.25} className="h-3.5 w-3.5" />}
+                </button>
+                <a href={`${MAINNET_CONFIG.explorerUrl}/address/${MAINNET_CONFIG.guardedAccountAddress}`} target="_blank" rel="noopener noreferrer" className="text-zinc-500 dark:text-[#a1a1aa] hover:text-zinc-900 dark:hover:text-white inline-flex items-center gap-0.5">
+                  <ExternalLink strokeWidth={1.25} className="h-3.5 w-3.5" />
+                </a>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        {/* Testnet Contracts */}
+        <div className="flex items-center gap-2 text-xs font-mono font-semibold uppercase tracking-wider text-zinc-500 dark:text-[#a1a1aa] mb-4">
+          <ShieldCheck strokeWidth={1.25} className="h-4 w-4 text-zinc-900 dark:text-white" />
+          <span>X Layer Testnet · Chain 1952 · Live Demo Data</span>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 xl:gap-8 gap-6 mb-12 lg:mb-14">
-          
+
           {/* Card 1: ThreatRegistry */}
-          <div className="rounded-2xl border border-zinc-200 dark:border-[#27272a] bg-white dark:bg-[#121215] p-6 flex flex-col justify-between hover:border-zinc-300 dark:border-[#52525b] transition-all">
+          <div className="rounded-2xl border border-zinc-200 dark:border-[#27272a] bg-white dark:bg-[#121215] p-6 flex flex-col justify-between hover:border-zinc-300 dark:hover:border-[#52525b] transition-all">
             <div>
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-mono text-zinc-400 dark:text-[#71717a] uppercase">Contract</span>
@@ -87,7 +154,7 @@ export const ContractsApi: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleCopy(NETWORK_CONFIG.threatRegistryAddress, 'reg-addr')}
-                  className="text-zinc-400 dark:text-[#71717a] hover:text-zinc-900 dark:text-white"
+                  className="text-zinc-400 dark:text-[#71717a] hover:text-zinc-900 dark:hover:text-white"
                   title="Copy address"
                 >
                   {copiedKey === 'reg-addr' ? <Check strokeWidth={1.25} className="h-3.5 w-3.5 text-zinc-900 dark:text-white" /> : <Copy strokeWidth={1.25} className="h-3.5 w-3.5 text-zinc-400 dark:text-[#71717a]" />}
@@ -96,7 +163,7 @@ export const ContractsApi: React.FC = () => {
                   href={`${NETWORK_CONFIG.explorerUrl}/address/${NETWORK_CONFIG.threatRegistryAddress}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-zinc-500 dark:text-[#a1a1aa] hover:text-zinc-900 dark:text-white inline-flex items-center gap-0.5"
+                  className="text-zinc-500 dark:text-[#a1a1aa] hover:text-zinc-900 dark:hover:text-white inline-flex items-center gap-0.5"
                 >
                   <ExternalLink strokeWidth={1.25} className="h-3.5 w-3.5" />
                 </a>
@@ -105,7 +172,7 @@ export const ContractsApi: React.FC = () => {
           </div>
 
           {/* Card 2: GuardedAccount */}
-          <div className="rounded-2xl border border-zinc-200 dark:border-[#27272a] bg-white dark:bg-[#121215] p-6 flex flex-col justify-between hover:border-zinc-300 dark:border-[#52525b] transition-all">
+          <div className="rounded-2xl border border-zinc-200 dark:border-[#27272a] bg-white dark:bg-[#121215] p-6 flex flex-col justify-between hover:border-zinc-300 dark:hover:border-[#52525b] transition-all">
             <div>
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-mono text-zinc-400 dark:text-[#71717a] uppercase">Contract</span>
@@ -115,7 +182,7 @@ export const ContractsApi: React.FC = () => {
               </div>
               <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-2">GuardedAccount</h3>
               <p className="text-xs text-zinc-500 dark:text-[#a1a1aa] leading-relaxed mb-4">
-                The smart contract account under DAegis guard. Guardian’s strictly constrained power is: <code className="text-zinc-900 dark:text-white bg-zinc-100 dark:bg-[#18181b] px-1 py-0.5 rounded font-mono">revoke(spender)</code>.
+                The smart contract account under DAegis guard. Guardian's strictly constrained power is: <code className="text-zinc-900 dark:text-white bg-zinc-100 dark:bg-[#18181b] px-1 py-0.5 rounded font-mono">revoke(spender)</code>.
               </p>
             </div>
 
@@ -125,7 +192,7 @@ export const ContractsApi: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleCopy(NETWORK_CONFIG.guardedAccountAddress, 'guard-addr')}
-                  className="text-zinc-400 dark:text-[#71717a] hover:text-zinc-900 dark:text-white"
+                  className="text-zinc-400 dark:text-[#71717a] hover:text-zinc-900 dark:hover:text-white"
                   title="Copy address"
                 >
                   {copiedKey === 'guard-addr' ? <Check strokeWidth={1.25} className="h-3.5 w-3.5 text-zinc-900 dark:text-white" /> : <Copy strokeWidth={1.25} className="h-3.5 w-3.5 text-zinc-400 dark:text-[#71717a]" />}
@@ -134,7 +201,7 @@ export const ContractsApi: React.FC = () => {
                   href={`${NETWORK_CONFIG.explorerUrl}/address/${NETWORK_CONFIG.guardedAccountAddress}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-zinc-500 dark:text-[#a1a1aa] hover:text-zinc-900 dark:text-white inline-flex items-center gap-0.5"
+                  className="text-zinc-500 dark:text-[#a1a1aa] hover:text-zinc-900 dark:hover:text-white inline-flex items-center gap-0.5"
                 >
                   <ExternalLink strokeWidth={1.25} className="h-3.5 w-3.5" />
                 </a>
@@ -143,7 +210,7 @@ export const ContractsApi: React.FC = () => {
           </div>
 
           {/* Card 3: Network */}
-          <div className="rounded-2xl border border-zinc-200 dark:border-[#27272a] bg-white dark:bg-[#121215] p-6 flex flex-col justify-between hover:border-zinc-300 dark:border-[#52525b] transition-all">
+          <div className="rounded-2xl border border-zinc-200 dark:border-[#27272a] bg-white dark:bg-[#121215] p-6 flex flex-col justify-between hover:border-zinc-300 dark:hover:border-[#52525b] transition-all">
             <div>
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-mono text-zinc-400 dark:text-[#71717a] uppercase">Network</span>
@@ -153,7 +220,7 @@ export const ContractsApi: React.FC = () => {
               </div>
               <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-2">X Layer Testnet</h3>
               <p className="text-xs text-zinc-500 dark:text-[#a1a1aa] leading-relaxed mb-4">
-                ZK-powered Layer 2 testnet with native OKB gas token. High throughput and instant cryptographic state finality.
+                OP Stack Layer 2 testnet with native OKB gas token. Live demo verdicts and the proven 91-block save are on this network.
               </p>
             </div>
 
@@ -163,7 +230,7 @@ export const ContractsApi: React.FC = () => {
                 href={NETWORK_CONFIG.explorerUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-zinc-500 dark:text-[#a1a1aa] hover:text-zinc-900 dark:text-white inline-flex items-center gap-0.5"
+                className="text-zinc-500 dark:text-[#a1a1aa] hover:text-zinc-900 dark:hover:text-white inline-flex items-center gap-0.5"
               >
                 Explorer <ExternalLink strokeWidth={1.25} className="h-3.5 w-3.5" />
               </a>
