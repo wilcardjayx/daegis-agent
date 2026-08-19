@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -44,6 +45,30 @@ def emit(message: str) -> None:
     the hard way during the Phase 2 live run.
     """
     print(message, flush=True)
+
+
+def unbuffer_stdout() -> None:
+    """Make stdout/stderr fully unbuffered — the in-code equivalent of `python3 -u`.
+
+    `emit`'s per-line `flush=True` empties Python's own TextIOWrapper buffer, but
+    that is not always enough: when stdout is a pipe (a `tee`, a terminal
+    multiplexer, an editor's integrated terminal) the interpreter may still open
+    it block-buffered, and some environments swallow output until the process
+    exits regardless of per-call flushes. `write_through=True` disables that
+    buffering at the layer `flush` cannot reach, so every line the loop prints
+    reaches the terminal the instant it is written. Call once at loop start.
+
+    Setting PYTHONUNBUFFERED in os.environ here would be too late — it only
+    affects child processes, not this already-running interpreter — which is why
+    this reconfigures the live streams instead.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(line_buffering=True, write_through=True)
+        except (AttributeError, ValueError):
+            # A stream replaced by a non-reconfigurable object (e.g. a test's
+            # StringIO capture) — nothing to unbuffer, and nothing to fail over.
+            pass
 
 
 class RpcError(RuntimeError):
@@ -332,9 +357,16 @@ def follow(
             time.sleep(config.POLL_INTERVAL_SECONDS)
             continue
 
-        events = scan_range(rpc, cursor, safe_head, token=token)
-        if unlimited_only:
-            events = filter_unlimited(events)
+        scanned = scan_range(rpc, cursor, safe_head, token=token)
+        events = filter_unlimited(scanned) if unlimited_only else scanned
+
+        # Per-poll heartbeat: proves the poller is alive and scanning even across
+        # quiet stretches where nothing is flagged, so a redirected log (or a live
+        # demo) shows steady progress instead of apparent silence.
+        emit(
+            f"[detect] scanned blocks {cursor}..{safe_head}: "
+            f"{len(scanned)} approvals, {len(events)} flagged (head {head})"
+        )
 
         for event in events:
             if on_event is not None:
@@ -354,6 +386,7 @@ def follow(
 
 
 def main(argv: Optional[list[str]] = None) -> int:
+    unbuffer_stdout()
     parser = argparse.ArgumentParser(description="DAegis Phase 2 approval detector")
     parser.add_argument("--from-block", type=int, help="inclusive start block")
     parser.add_argument("--to-block", type=int, help="inclusive end block (default: head)")

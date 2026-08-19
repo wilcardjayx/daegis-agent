@@ -25,7 +25,7 @@ import argparse
 from typing import Optional
 
 from agent import act, config, decide
-from agent.detect import ApprovalEvent, JsonRpc, emit, follow
+from agent.detect import ApprovalEvent, JsonRpc, emit, follow, unbuffer_stdout
 
 
 def _handle_approval(rpc: JsonRpc, event: ApprovalEvent) -> None:
@@ -79,6 +79,7 @@ def run(rpc: Optional[JsonRpc] = None, max_iterations: Optional[int] = None,
 
 
 def main(argv: Optional[list[str]] = None) -> int:
+    unbuffer_stdout()
     parser = argparse.ArgumentParser(description="DAegis Phase 4 guarded loop")
     parser.add_argument("--follow", action="store_true", help="poll forward continuously")
     parser.add_argument("--from-block", type=int, help="start block (default: cursor or head)")
