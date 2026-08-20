@@ -86,6 +86,9 @@ export async function queryXLayerRpc(method: string, params: unknown[]): Promise
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ jsonrpc: '2.0', id: Date.now(), method, params }),
         signal: controller.signal,
+        // Never serve on-chain reads from the browser HTTP cache — a refresh
+        // must reflect current chain state, not a response stored on a prior load.
+        cache: 'no-store',
       });
       clearTimeout(t);
       if (!res.ok) throw new Error(`RPC HTTP ${res.status}`);
@@ -171,7 +174,7 @@ async function loadReasoning(reasonHash: string): Promise<Reasoning> {
   if (reasonCache[reasonHash]) return reasonCache[reasonHash];
   const p = (async () => {
     try {
-      const r = await fetch(`${BASE}verdicts/${reasonHash}.json`);
+      const r = await fetch(`${BASE}verdicts/${reasonHash}.json`, { cache: 'no-store' });
       if (!r.ok) return { available: false };
       const j = await r.json();
       const computed = keccak256(j.reasoning);
@@ -206,7 +209,7 @@ export async function loadRegistry(): Promise<{ rows: LiveVerdict[]; headBlock: 
 
   let seed: string[] = [];
   try {
-    const r = await fetch(`${BASE}flags.json`);
+    const r = await fetch(`${BASE}flags.json`, { cache: 'no-store' });
     if (r.ok) seed = (await r.json()).spenders || [];
   } catch { /* seed optional */ }
 
